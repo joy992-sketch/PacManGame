@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pac-Man Arcade Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Retro Pixel Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* Custom Retro Styling */
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #050508;
+            color: #ffffff;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        .font-vt {
+            font-family: 'VT323', monospace;
+        }
+
+        /* Neon Glow Effects */
+        .glow-title {
+            text-shadow: 0 0 10px #ff0055, 0 0 20px #ff0055, 0 0 30px #ff0055, 0 0 40px #ff0055;
+        }
+
+        .glow-blue {
+            box-shadow: 0 0 15px rgba(0, 150, 255, 0.6), inset 0 0 15px rgba(0, 150, 255, 0.4);
+            border-color: #0096ff;
+        }
+
+        .glow-pink {
+            box-shadow: 0 0 15px rgba(255, 0, 128, 0.6), inset 0 0 15px rgba(255, 0, 128, 0.4);
+            border-color: #ff0080;
+        }
+
+        .btn-arcade {
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-arcade:hover {
+            transform: scale(1.03);
+            background-color: #ff0080;
+            color: #ffffff;
+            box-shadow: 0 0 20px #ff0080;
+        }
+
+        .btn-arcade:active {
+            transform: scale(0.97);
+        }
+
+        /* Arcade CRT Scanline Overlay Effect */
+        .scanlines {
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            pointer-events: none;
+        }
+
+        /* Custom Modal Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0d1a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff0080;
+            border-radius: 4px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+    </style>
+</head>
+<body class="bg-black min-h-screen flex flex-col items-center justify-center relative p-2 sm:p-4 overflow-hidden">
+
+    <!-- CRT Scanline Screen Effect -->
+    <div class="scanlines fixed inset-0 z-50 pointer-events-none"></div>
+
+    <!-- Container Frame -->
+    <div id="app-container" class="w-full max-w-4xl min-h-[600px] border-4 border-purple-600 rounded-xl bg-slate-950 p-4 sm:p-6 flex flex-col items-center justify-between relative shadow-[0_0_50px_rgba(147,51,234,0.3)] my-auto">
+        
+        <!-- Header / Status Bar -->
+        <header class="w-full flex justify-between items-center mb-4 pb-2 border-b-2 border-purple-900/50 text-xs sm:text-sm">
+            <div class="flex items-center gap-2">
+                <span class="text-yellow-400 font-pixel">HIGH SCORE:</span>
+                <span id="high-score-display" class="text-white font-pixel">000000</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <button id="mute-btn" class="text-gray-400 hover:text-yellow-400 transition" title="Toggle Sound">
+                    <i id="mute-icon" class="fa-solid fa-volume-high text-lg sm:text-xl"></i>
+                </button>
+                <div class="text-xs text-purple-400 tracking-widest hidden sm:block font-vt text-lg">ARCADE MACHINE V2.5</div>
+            </div>
+        </header>
+
+        <!-- MAIN MENU FRAME -->
+        <main id="main-menu" class="w-full flex flex-col items-center justify-center flex-1 py-6 gap-6 z-10">
+            <!-- Game Title Banner -->
+            <div class="text-center my-4">
+                <h1 class="text-4xl sm:text-6xl md:text-7xl font-bold tracking-wider text-yellow-400 glow-title mb-2">PAC-MAN</h1>
+                <p class="text-xs sm:text-sm text-cyan-400 tracking-widest font-vt text-xl">GOOGLE DOODLE EDITION</p>
+            </div>
+
+            <!-- Arcade Menu Options Box -->
+            <div class="w-full max-w-md bg-slate-900/80 border-2 border-purple-500 rounded-lg p-6 flex flex-col gap-4 glow-blue">
+                <button id="start-game-btn" class="btn-arcade w-full py-3 sm:py-4 px-4 bg-purple-950/60 border-2 border-purple-400 text-purple-200 text-xs sm:text-sm rounded uppercase tracking-wider font-pixel flex items-center justify-between">
+                    <span>&gt; START GAME</span>
+                    <i class="fa-solid fa-play text-xs"></i>
+                </button>
+                <button id="how-to-play-btn" class="btn-arcade w-full py-3 sm:py-4 px-4 bg-purple-950/60 border-2 border-purple-400 text-purple-200 text-xs sm:text-sm rounded uppercase tracking-wider font-pixel flex items-center justify-between">
+                    <span>&gt; HOW TO PLAY</span>
+                    <i class="fa-solid fa-gamepad text-xs"></i>
+                </button>
+                <button id="about-us-btn" class="btn-arcade w-full py-3 sm:py-4 px-4 bg-purple-950/60 border-2 border-purple-400 text-purple-200 text-xs sm:text-sm rounded uppercase tracking-wider font-pixel flex items-center justify-between">
+                    <span>&gt; ABOUT US</span>
+                    <i class="fa-solid fa-users text-xs"></i>
+                </button>
+                <button id="exit-btn" class="btn-arcade w-full py-3 sm:py-4 px-4 bg-purple-950/60 border-2 border-purple-400 text-purple-200 text-xs sm:text-sm rounded uppercase tracking-wider font-pixel flex items-center justify-between">
+                    <span>&gt; EXIT</span>
+                    <i class="fa-solid fa-power-off text-xs"></i>
+                </button>
+            </div>
+
+            <!-- Menu Navigation Helper Controls -->
+            <div class="text-center text-xs text-gray-400 font-vt text-lg mt-2 space-y-1">
+                <p>USE ARROWS / WASD TO MOVE PAC-MAN</p>
+                <p class="text-yellow-500">PRESS [P] TO PAUSE GAME</p>
+            </div>
+        </main>
+
+        <!-- GAME PLAY SCREEN FRAME -->
+        <main id="game-screen" class="w-full flex-col items-center justify-center flex-1 hidden z-10 w-full">
+            <!-- Top Game Bar Info -->
+            <div class="w-full flex justify-between items-center mb-2 px-2 text-xs sm:text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-red-500">SCORE:</span>
+                    <span id="current-score" class="text-white">0</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-yellow-400">LIVES:</span>
+                    <div id="lives-container" class="flex gap-1">
+                        <!-- Lives rendered via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Canvas Container -->
+            <div id="canvas-wrapper" class="relative w-full flex items-center justify-center bg-black border-4 border-blue-600 rounded-lg p-1 sm:p-2 shadow-[0_0_20px_rgba(0,102,255,0.6)] overflow-hidden">
+                <canvas id="pacmanCanvas" width="760" height="280" class="max-w-full h-auto rounded block"></canvas>
+                
+                <!-- Game Over / Victory / Ready Overlay -->
+                <div id="game-overlay" class="absolute inset-0 bg-black/80 flex flex-col items-center justify-center hidden backdrop-blur-sm">
+                    <h2 id="overlay-title" class="text-2xl sm:text-4xl text-yellow-400 font-pixel mb-4 glow-title text-center">READY!</h2>
+                    <p id="overlay-subtitle" class="text-xs sm:text-sm text-cyan-300 font-pixel mb-6 text-center">PRESS ANY KEY TO START</p>
+                    <button id="overlay-btn" class="btn-arcade py-3 px-6 bg-purple-900 border-2 border-purple-400 text-white font-pixel text-xs rounded">
+                        CONTINUE
+                    </button>
+                </div>
+            </div>
+
+            <!-- In-game Controls Footer -->
+            <div class="w-full flex justify-between items-center mt-3 px-2">
+                <button id="back-to-menu-btn" class="px-3 py-1.5 bg-slate-800 border border-slate-600 hover:border-yellow-400 text-xs text-gray-300 hover:text-yellow-400 rounded transition font-pixel">
+                    &lt; MENU
+                </button>
+                <div class="text-[10px] sm:text-xs text-slate-400 font-vt text-lg">
+                    PAC-MAN MAZE: GOOGLE DOODLE THEME
+                </div>
+                <button id="pause-game-btn" class="px-3 py-1.5 bg-slate-800 border border-slate-600 hover:border-yellow-400 text-xs text-gray-300 hover:text-yellow-400 rounded transition font-pixel">
+                    PAUSE
+                </button>
+            </div>
+        </main>
+
+        <!-- HOW TO PLAY MODAL -->
+        <div id="how-to-play-modal" class="fixed inset-0 bg-black/85 z-40 flex items-center justify-center p-4 hidden">
+            <div class="bg-slate-900 border-2 border-pink-500 rounded-lg p-6 max-w-xl w-full glow-pink flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+                <h2 class="text-xl sm:text-2xl font-pixel text-pink-500 text-center border-b border-pink-900/50 pb-3">HOW TO PLAY</h2>
+                
+                <div class="space-y-4 text-xs sm:text-sm font-vt text-xl leading-relaxed text-slate-200">
+                    <div>
+                        <h3 class="text-yellow-400 font-pixel text-xs mb-1">OBJECTIVE:</h3>
+                        <p>Guide Pac-Man through the maze to eat all the yellow dots while avoiding the four colorful ghosts.</p>
+                    </div>
+
+                    <div>
+                        <h3 class="text-yellow-400 font-pixel text-xs mb-1">KEYBOARD CONTROLS:</h3>
+                        <ul class="list-disc list-inside space-y-1 text-slate-300">
+                            <li><span class="text-cyan-400">UP / W:</span> Move Up</li>
+                            <li><span class="text-cyan-400">DOWN / S:</span> Move Down</li>
+                            <li><span class="text-cyan-400">LEFT / A:</span> Move Left</li>
+                            <li><span class="text-cyan-400">RIGHT / D:</span> Move Right</li>
+                            <li><span class="text-cyan-400">P KEY:</span> Pause Game</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-yellow-400 font-pixel text-xs mb-1">POWER PELLETS & GHOSTS:</h3>
+                        <p>Eat the larger flashing Power Pellets to turn ghosts vulnerable (blue) for a short period. Eat blue ghosts for bonus points!</p>
+                    </div>
+                </div>
+
+                <button id="close-how-to-play" class="btn-arcade mt-2 w-full py-3 bg-pink-950 border border-pink-500 text-pink-200 text-xs font-pixel rounded">
+                    PRESS ENTER OR CLICK TO RETURN
+                </button>
+            </div>
+        </div>
+
+        <!-- ABOUT US MODAL -->
+        <div id="about-us-modal" class="fixed inset-0 bg-black/85 z-40 flex items-center justify-center p-4 hidden">
+            <div class="bg-slate-900 border-2 border-cyan-500 rounded-lg p-6 max-w-2xl w-full glow-blue flex flex-col gap-4 max-h-[90vh] overflow-y-auto">
+                <h2 class="text-xl sm:text-2xl font-pixel text-cyan-400 text-center border-b border-cyan-900/50 pb-3">DEVELOPERS</h2>
+                
+                <div class="text-center font-pixel text-xs text-yellow-400 mb-2">ABOUT US</div>
+
+                <!-- Developer Cards Grid -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-2">
+                    <!-- Dev Card 1 -->
+                    <div class="bg-slate-950 border border-cyan-500/50 rounded-lg p-4 flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full border-2 border-cyan-400 mb-3 flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(0,220,255,0.4)]">
+                            <span class="text-2xl font-pixel text-cyan-400">U</span>
+                        </div>
+                        <h3 class="text-[11px] font-pixel text-yellow-300">MD UDOY HOSSAIN JOY</h3>
+                        <span class="mt-2 text-[10px] text-cyan-400 bg-cyan-950/60 px-2 py-1 rounded border border-cyan-800 font-vt">LEAD DEVELOPER</span>
+                    </div>
+
+                    <!-- Dev Card 2 -->
+                    <div class="bg-slate-950 border border-cyan-500/50 rounded-lg p-4 flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full border-2 border-pink-400 mb-3 flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(255,0,128,0.4)]">
+                            <span class="text-2xl font-pixel text-pink-400">I</span>
+                        </div>
+                        <h3 class="text-[11px] font-pixel text-yellow-300">IMTIYAZ ALI</h3>
+                        <span class="mt-2 text-[10px] text-pink-400 bg-pink-950/60 px-2 py-1 rounded border border-pink-800 font-vt">GAME ARCHITECT</span>
+                    </div>
+
+                    <!-- Dev Card 3 -->
+                    <div class="bg-slate-950 border border-cyan-500/50 rounded-lg p-4 flex flex-col items-center text-center">
+                        <div class="w-20 h-20 bg-slate-800 rounded-full border-2 border-green-400 mb-3 flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(0,255,128,0.4)]">
+                            <span class="text-2xl font-pixel text-green-400">J</span>
+                        </div>
+                        <h3 class="text-[11px] font-pixel text-yellow-300">JUNAED AHMED</h3>
+                        <span class="mt-2 text-[10px] text-green-400 bg-green-950/60 px-2 py-1 rounded border border-green-800 font-vt">UI/UX DESIGNER</span>
+                    </div>
+                </div>
+
+                <div class="text-center font-vt text-lg text-slate-400 my-1">
+                    1-1 GAME PROJECT • PAC-MAN RETRO RECREATION
+                </div>
+
+                <button id="close-about-us" class="btn-arcade mt-2 w-full py-3 bg-cyan-950 border border-cyan-500 text-cyan-200 text-xs font-pixel rounded">
+                    PRESS ENTER OR CLICK TO RETURN
+                </button>
+            </div>
+        </div>
+
+        <!-- EXIT MODAL / SCREEN -->
+        <div id="exit-modal" class="fixed inset-0 bg-black/90 z-40 flex items-center justify-center p-4 hidden">
+            <div class="bg-slate-900 border-2 border-red-500 rounded-lg p-6 max-w-md w-full text-center flex flex-col gap-4">
+                <h2 class="text-2xl font-pixel text-red-500">GAME TERMINATED</h2>
+                <p class="font-vt text-2xl text-slate-300">THANKS FOR PLAYING PAC-MAN!</p>
+                <div class="py-4">
+                    <i class="fa-solid fa-power-off text-5xl text-red-500 animate-pulse"></i>
+                </div>
+                <button id="restart-exit-btn" class="btn-arcade w-full py-3 bg-red-950 border border-red-500 text-red-200 text-xs font-pixel rounded">
+                    RESTART MACHINE
+                </button>
+            </div>
+        </div>
+
+        <!-- Bottom Arcade Machine Branding -->
+        <footer class="w-full text-center text-[10px] sm:text-xs text-slate-500 font-pixel mt-4 pt-2 border-t border-purple-900/40">
+            © 2026 CLASSIC ARCADE • GOOGLE PAC-MAN STYLE MAZE
+        </footer>
+    </div>
+
+    <script>
+        // Web Audio API Sound Synthesizer for Retro Arcade Effects
+        class SoundSystem {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playWaka() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(400, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.08);
+                gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playEatGhost() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(300, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(800, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            }
+
+            playPowerPellet() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(300, this.ctx.currentTime + 0.15);
+                gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.15);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.15);
+            }
+
+            playDeath() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(500, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.6);
+                gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.6);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.6);
+            }
+        }
+
+        const sound = new SoundSystem();
+
+        // --- MAP DEFINITION: Google Pac-Man Style Rectangular Doodle Layout ---
+        // 1: Wall, 0: Dot, 2: Power Pellet, 3: Empty, 4: Ghost House Door/Inside
+        const GOOGLE_PACMAN_MAP = [
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+            [1,2,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,2,1],
+            [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,1,3,1,0,1,0,1,3,1,0,1,0,1,3,1,0,1,1,0,1,3,1,0,1,0,1,3,1,0,1,0,1,3,1,0,1],
+            [1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1,1,0,1,1,1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],
+            [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+            [1,0,1,1,1,0,1,1,0,1,1,1,1,1,0,1,1,1,4,4,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,0,1],
+            [1,0,0,0,1,0,0,1,0,0,0,1,0,0,0,1,4,4,4,4,4,4,1,0,0,0,1,0,0,0,1,0,0,1,0,0,0,1],
+            [1,1,1,0,1,1,0,1,0,1,0,1,0,1,0,1,1,1,1,1,1,1,1,0,1,0,1,0,1,0,1,0,1,1,0,1,1,1],
+            [1,2,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,2,1],
+            [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+        ];
+
+        const TILE_SIZE = 20; // 38 cols * 20 = 760px, 11 rows * 20 + top margin
+        const COLS = GOOGLE_PACMAN_MAP[0].length;
+        const ROWS = GOOGLE_PACMAN_MAP.length;
+
+        let canvas, ctx;
+        let score = 0;
+        let highScore = localStorage.getItem('pacman_high_score') || 0;
+        let lives = 3;
+        let gameOver = false;
+        let gamePaused = false;
+        let gameStarted = false;
+        let frightenTimer = 0;
+
+        // Pac-Man Object State
+        const pacman = {
+            x: 18 * TILE_SIZE + TILE_SIZE / 2,
+            y: 9 * TILE_SIZE + TILE_SIZE / 2,
+            radius: TILE_SIZE / 2 - 2,
+            speed: 2,
+            dirX: 0,
+            dirY: 0,
+            nextDirX: 0,
+            nextDirY: 0,
+            mouthAngle: 0.2,
+            mouthSpeed: 0.03,
+            reset() {
+                this.x = 18 * TILE_SIZE + TILE_SIZE / 2;
+                this.y = 9 * TILE_SIZE + TILE_SIZE / 2;
+                this.dirX = 0;
+                this.dirY = 0;
+                this.nextDirX = 0;
+                this.nextDirY = 0;
+            }
+        };
+
+        // Ghosts Setup
+        class Ghost {
+            constructor(color, gridX, gridY) {
+                this.color = color;
+                this.gridX = gridX;
+                this.gridY = gridY;
+                this.x = gridX * TILE_SIZE + TILE_SIZE / 2;
+                this.y = gridY * TILE_SIZE + TILE_SIZE / 2;
+                this.speed = 1.6;
+                this.dirX = 0;
+                this.dirY = -1;
+                this.isFrightened = false;
+                this.initialX = gridX;
+                this.initialY = gridY;
+            }
+
+            reset() {
+                this.x = this.initialX * TILE_SIZE + TILE_SIZE / 2;
+                this.y = this.initialY * TILE_SIZE + TILE_SIZE / 2;
+                this.dirX = 0;
+                this.dirY = -1;
+                this.isFrightened = false;
+            }
+
+            update() {
+                // Ghost Movement AI
+                let nextX = this.x + this.dirX * this.speed;
+                let nextY = this.y + this.dirY * this.speed;
+
+                // Simple grid intersection decision
+                if (Math.floor((this.x) % TILE_SIZE) === TILE_SIZE / 2 && Math.floor((this.y) % TILE_SIZE) === TILE_SIZE / 2) {
+                    const currentTileX = Math.floor(this.x / TILE_SIZE);
+                    const currentTileY = Math.floor(this.y / TILE_SIZE);
+
+                    const possibleDirs = [];
+                    const dirs = [
+                        { x: 0, y: -1 },
+                        { x: 0, y: 1 },
+                        { x: -1, y: 0 },
+                        { x: 1, y: 0 }
+                    ];
+
+                    dirs.forEach(d => {
+                        // Avoid complete backwards flip immediately unless necessary
+                        if (d.x !== -this.dirX || d.y !== -this.dirY) {
+                            let checkX = currentTileX + d.x;
+                            let checkY = currentTileY + d.y;
+                            if (checkY >= 0 && checkY < ROWS && checkX >= 0 && checkX < COLS) {
+                                if (GOOGLE_PACMAN_MAP[checkY][checkX] !== 1) {
+                                    possibleDirs.push(d);
+                                }
+                            }
+                        }
+                    });
+
+                    if (possibleDirs.length > 0) {
+                        const chosen = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
+                        this.dirX = chosen.x;
+                        this.dirY = chosen.y;
+                    } else {
+                        this.dirX = -this.dirX;
+                        this.dirY = -this.dirY;
+                    }
+                }
+
+                // Apply Movement
+                if (!isWallCollision(this.x + this.dirX * this.speed, this.y + this.dirY * this.speed)) {
+                    this.x += this.dirX * this.speed;
+                    this.y += this.dirY * this.speed;
+                }
+            }
+
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = this.isFrightened ? (frightenTimer < 100 && Math.floor(frightenTimer / 10) % 2 === 0 ? '#FFFFFF' : '#0000FF') : this.color;
+                
+                // Ghost Body Shape
+                let radius = TILE_SIZE / 2 - 2;
+                ctx.arc(this.x, this.y - 2, radius, Math.PI, 0, false);
+                ctx.lineTo(this.x + radius, this.y + radius);
+                
+                // Wavy feet
+                let feet = 3;
+                let footWidth = (radius * 2) / feet;
+                for (let i = 0; i < feet; i++) {
+                    ctx.lineTo(this.x + radius - (i * footWidth) - (footWidth / 2), this.y + radius - (i % 2 === 0 ? 3 : 0));
+                }
+                ctx.lineTo(this.x - radius, this.y + radius);
+                ctx.closePath();
+                ctx.fill();
+
+                // Eyes
+                if (!this.isFrightened) {
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(this.x - 4, this.y - 4, 3, 0, Math.PI * 2);
+                    ctx.arc(this.x + 4, this.y - 4, 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = '#0000FF';
+                    ctx.beginPath();
+                    ctx.arc(this.x - 4 + this.dirX * 1.5, this.y - 4 + this.dirY * 1.5, 1.5, 0, Math.PI * 2);
+                    ctx.arc(this.x + 4 + this.dirX * 1.5, this.y - 4 + this.dirY * 1.5, 1.5, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Frightened Eyes/Face
+                    ctx.fillStyle = '#FFCC00';
+                    ctx.fillRect(this.x - 4, this.y - 4, 2, 2);
+                    ctx.fillRect(this.x + 2, this.y - 4, 2, 2);
+                }
+            }
+        }
+
+        let ghosts = [];
+
+        let currentMap = JSON.parse(JSON.stringify(GOOGLE_PACMAN_MAP));
+
+        function initMap() {
+            currentMap = JSON.parse(JSON.stringify(GOOGLE_PACMAN_MAP));
+        }
+
+        function isWallCollision(x, y) {
+            if (!currentMap || !currentMap.length) return false;
+            let radius = pacman.radius - 1;
+            let checkPoints = [
+                { x: x - radius, y: y - radius },
+                { x: x + radius, y: y - radius },
+                { x: x - radius, y: y + radius },
+                { x: x + radius, y: y + radius }
+            ];
+
+            for (let pt of checkPoints) {
+                let gridX = Math.floor(pt.x / TILE_SIZE);
+                let gridY = Math.floor(pt.y / TILE_SIZE);
+
+                if (gridY < 0 || gridY >= ROWS || gridX < 0 || gridX >= COLS) return true;
+                if (currentMap[gridY] && currentMap[gridY][gridX] === 1) return true;
+            }
+            return false;
+        }
+
+        function renderMap() {
+            if (!currentMap || !currentMap.length) return;
+            for (let r = 0; r < ROWS; r++) {
+                if (!currentMap[r]) continue;
+                for (let c = 0; c < COLS; c++) {
+                    let tile = currentMap[r][c];
+                    let x = c * TILE_SIZE;
+                    let y = r * TILE_SIZE;
+
+                    if (tile === 1) {
+                        // Google-Doodle Blue Glowing Double Wall Style
+                        ctx.strokeStyle = '#1919A6';
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+                        ctx.strokeStyle = '#0000FF';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(x + 4, y + 4, TILE_SIZE - 8, TILE_SIZE - 8);
+                    } else if (tile === 0) {
+                        // Small Yellow Dot
+                        ctx.fillStyle = '#ffb8ae';
+                        ctx.beginPath();
+                        ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else if (tile === 2) {
+                        // Flashing Power Pellet
+                        if (Math.floor(Date.now() / 200) % 2 === 0) {
+                            ctx.fillStyle = '#ffb8ae';
+                            ctx.beginPath();
+                            ctx.arc(x + TILE_SIZE / 2, y + TILE_SIZE / 2, 6, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateGame() {
+            if (gameOver || gamePaused || !gameStarted || !currentMap.length) return;
+
+            // Frighten Timer Logic
+            if (frightenTimer > 0) {
+                frightenTimer--;
+                if (frightenTimer === 0) {
+                    ghosts.forEach(g => g.isFrightened = false);
+                }
+            }
+
+            // Check if Pac-Man can turn in queued direction
+            if (pacman.nextDirX !== 0 || pacman.nextDirY !== 0) {
+                let testX = pacman.x + pacman.nextDirX * pacman.speed;
+                let testY = pacman.y + pacman.nextDirY * pacman.speed;
+                if (!isWallCollision(testX, testY)) {
+                    pacman.dirX = pacman.nextDirX;
+                    pacman.dirY = pacman.nextDirY;
+                }
+            }
+
+            // Move Pac-Man
+            let nextX = pacman.x + pacman.dirX * pacman.speed;
+            let nextY = pacman.y + pacman.dirY * pacman.speed;
+
+            if (!isWallCollision(nextX, nextY)) {
+                pacman.x = nextX;
+                pacman.y = nextY;
+            }
+
+            // Eat Dots & Power Pellets
+            let gridX = Math.floor(pacman.x / TILE_SIZE);
+            let gridY = Math.floor(pacman.y / TILE_SIZE);
+
+            if (gridY >= 0 && gridY < ROWS && gridX >= 0 && gridX < COLS) {
+                if (currentMap[gridY][gridX] === 0) {
+                    currentMap[gridY][gridX] = 3; // Clear dot
+                    score += 10;
+                    sound.playWaka();
+                } else if (currentMap[gridY][gridX] === 2) {
+                    currentMap[gridY][gridX] = 3; // Clear power pellet
+                    score += 50;
+                    frightenTimer = 300; // ~5 seconds
+                    ghosts.forEach(g => g.isFrightened = true);
+                    sound.playPowerPellet();
+                }
+            }
+
+            // Update Score & Highscore
+            document.getElementById('current-score').innerText = score;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('pacman_high_score', highScore);
+                document.getElementById('high-score-display').innerText = String(highScore).padStart(6, '0');
+            }
+
+            // Update Ghosts & Check Collisions
+            ghosts.forEach(ghost => {
+                ghost.update();
+
+                let dist = Math.hypot(pacman.x - ghost.x, pacman.y - ghost.y);
+                if (dist < TILE_SIZE - 4) {
+                    if (ghost.isFrightened) {
+                        sound.playEatGhost();
+                        score += 200;
+                        ghost.reset();
+                    } else {
+                        // Pac-Man hit by ghost
+                        sound.playDeath();
+                        lives--;
+                        updateLivesDisplay();
+                        if (lives <= 0) {
+                            gameOver = true;
+                            showOverlay("GAME OVER", "FINAL SCORE: " + score);
+                        } else {
+                            pacman.reset();
+                            ghosts.forEach(g => g.reset());
+                        }
+                    }
+                }
+            });
+
+            // Check Win Condition (All dots eaten)
+            let dotsLeft = false;
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    if (currentMap[r][c] === 0 || currentMap[r][c] === 2) {
+                        dotsLeft = true;
+                        break;
+                    }
+                }
+            }
+            if (!dotsLeft) {
+                gameOver = true;
+                showOverlay("VICTORY!", "YOU CLEARED THE MAZE!");
+            }
+        }
+
+        function drawPacman() {
+            ctx.beginPath();
+            let rotation = 0;
+            if (pacman.dirX === 1) rotation = 0;
+            if (pacman.dirX === -1) rotation = Math.PI;
+            if (pacman.dirY === 1) rotation = Math.PI / 2;
+            if (pacman.dirY === -1) rotation = -Math.PI / 2;
+
+            // Mouth Animation
+            pacman.mouthAngle += pacman.mouthSpeed;
+            if (pacman.mouthAngle > 0.45 || pacman.mouthAngle < 0.05) {
+                pacman.mouthSpeed = -pacman.mouthSpeed;
+            }
+
+            ctx.arc(
+                pacman.x,
+                pacman.y,
+                pacman.radius,
+                rotation + pacman.mouthAngle,
+                rotation + Math.PI * 2 - pacman.mouthAngle
+            );
+            ctx.lineTo(pacman.x, pacman.y);
+            ctx.fillStyle = '#FFFF00';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Map Walls & Items
+            renderMap();
+
+            // Draw Entities
+            drawPacman();
+            ghosts.forEach(g => g.draw());
+        }
+
+        function gameLoop() {
+            updateGame();
+            drawGame();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateLivesDisplay() {
+            const container = document.getElementById('lives-container');
+            container.innerHTML = '';
+            for (let i = 0; i < lives; i++) {
+                const life = document.createElement('div');
+                life.className = 'w-4 h-4 bg-yellow-400 rounded-full border border-black';
+                container.appendChild(life);
+            }
+        }
+
+        function showOverlay(title, subtitle) {
+            const overlay = document.getElementById('game-overlay');
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-subtitle').innerText = subtitle;
+            overlay.classList.remove('hidden');
+        }
+
+        function hideOverlay() {
+            document.getElementById('game-overlay').classList.add('hidden');
+        }
+
+        function startNewGame() {
+            initMap();
+            score = 0;
+            lives = 3;
+            gameOver = false;
+            gamePaused = false;
+            gameStarted = true;
+            pacman.reset();
+
+            // Initialize Ghosts: Blinky, Pinky, Inky, Clyde
+            ghosts = [
+                new Ghost('#FF0000', 17, 5),
+                new Ghost('#FFB8FF', 18, 5),
+                new Ghost('#00FFFF', 19, 5),
+                new Ghost('#FFB852', 20, 5)
+            ];
+
+            updateLivesDisplay();
+            hideOverlay();
+        }
+
+        // Initialize Application & Bind Controls
+        window.addEventListener('load', () => {
+            canvas = document.getElementById('pacmanCanvas');
+            ctx = canvas.getContext('2d');
+            document.getElementById('high-score-display').innerText = String(highScore).padStart(6, '0');
+
+            // Keyboard Controller
+            window.addEventListener('keydown', (e) => {
+                if (['ArrowUp', 'KeyW'].includes(e.code)) {
+                    pacman.nextDirX = 0; pacman.nextDirY = -1;
+                } else if (['ArrowDown', 'KeyS'].includes(e.code)) {
+                    pacman.nextDirX = 0; pacman.nextDirY = 1;
+                } else if (['ArrowLeft', 'KeyA'].includes(e.code)) {
+                    pacman.nextDirX = -1; pacman.nextDirY = 0;
+                } else if (['ArrowRight', 'KeyD'].includes(e.code)) {
+                    pacman.nextDirX = 1; pacman.nextDirY = 0;
+                } else if (e.code === 'KeyP') {
+                    gamePaused = !gamePaused;
+                    if (gamePaused) {
+                        showOverlay("PAUSED", "PRESS P TO RESUME");
+                    } else {
+                        hideOverlay();
+                    }
+                }
+            });
+
+            // UI Button Controls
+            document.getElementById('start-game-btn').addEventListener('click', () => {
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('hidden');
+                document.getElementById('game-screen').classList.add('flex');
+                startNewGame();
+            });
+
+            document.getElementById('back-to-menu-btn').addEventListener('click', () => {
+                document.getElementById('game-screen').classList.add('hidden');
+                document.getElementById('game-screen').classList.remove('flex');
+                document.getElementById('main-menu').classList.remove('hidden');
+                gameStarted = false;
+            });
+
+            document.getElementById('pause-game-btn').addEventListener('click', () => {
+                gamePaused = !gamePaused;
+                if (gamePaused) {
+                    showOverlay("PAUSED", "PRESS PAUSE TO RESUME");
+                } else {
+                    hideOverlay();
+                }
+            });
+
+            document.getElementById('overlay-btn').addEventListener('click', () => {
+                if (gameOver) {
+                    startNewGame();
+                } else {
+                    gamePaused = false;
+                    hideOverlay();
+                }
+            });
+
+            // Modal Controls
+            const toggleModal = (id, show) => {
+                document.getElementById(id).classList.toggle('hidden', !show);
+            };
+
+            document.getElementById('how-to-play-btn').addEventListener('click', () => toggleModal('how-to-play-modal', true));
+            document.getElementById('close-how-to-play').addEventListener('click', () => toggleModal('how-to-play-modal', false));
+
+            document.getElementById('about-us-btn').addEventListener('click', () => toggleModal('about-us-modal', true));
+            document.getElementById('close-about-us').addEventListener('click', () => toggleModal('about-us-modal', false));
+
+            document.getElementById('exit-btn').addEventListener('click', () => toggleModal('exit-modal', true));
+            document.getElementById('restart-exit-btn').addEventListener('click', () => toggleModal('exit-modal', false));
+
+            // Audio Mute Toggle
+            document.getElementById('mute-btn').addEventListener('click', () => {
+                sound.muted = !sound.muted;
+                const icon = document.getElementById('mute-icon');
+                if (sound.muted) {
+                    icon.className = 'fa-solid fa-volume-xmark text-lg sm:text-xl text-red-500';
+                } else {
+                    icon.className = 'fa-solid fa-volume-high text-lg sm:text-xl text-gray-400';
+                }
+            });
+
+            // Start Main Canvas Game Animation Loop
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+</body>
+</html>
